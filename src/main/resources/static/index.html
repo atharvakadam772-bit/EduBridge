@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduBridge - Universal Career Gap Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        .skill-chip { cursor: pointer; transition: all 0.2s ease; user-select: none; }
+        .skill-chip:hover { transform: translateY(-2px); }
+        .skill-chip.selected { background-color: #0d6efd !important; color: white !important; }
+    </style>
+</head>
+<body class="bg-body-tertiary">
+
+    <div class="container py-4">
+        <!-- Header -->
+        <header class="pb-3 mb-4 border-bottom d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="fw-bold text-primary mb-0">EduBridge</h1>
+                <p class="text-body-secondary mb-0">Universal Curriculum-to-Industry Gap Analyzer & Portfolio Architect</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-outline-secondary btn-sm" onclick="toggleTheme()">🌓 Theme</button>
+                <a href="/swagger-ui.html" target="_blank" class="btn btn-outline-primary btn-sm fw-bold">📜 API Docs</a>
+            </div>
+        </header>
+
+        <div class="row g-4">
+            <!-- Left Controls -->
+            <div class="col-lg-5">
+                <!-- Syllabus / Resume Text Parser -->
+                <div class="card shadow-sm border-0 p-4 mb-4">
+                    <h5 class="fw-bold text-body mb-2">⚡ Quick Syllabus / Resume Auto-Parser</h5>
+                    <p class="text-body-secondary small mb-2">Paste course syllabus or resume text below to auto-detect skills:</p>
+                    <textarea id="syllabusText" class="form-control mb-2" rows="2" placeholder="e.g. Learned Spring Boot, MySQL, AutoCAD, and Financial Modeling..."></textarea>
+                    <button class="btn btn-outline-primary btn-sm w-100 fw-bold" onclick="parseSyllabusText()">Scan & Select Skills</button>
+                </div>
+
+                <!-- Main Select & Create Form -->
+                <div class="card shadow-sm border-0 p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-body mb-0">1. Target Career Field</h5>
+                        <button class="btn btn-success btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+                            ➕ Add Custom Role
+                        </button>
+                    </div>
+
+                    <select id="roleSelect" class="form-select mb-4" onchange="runAnalysis()"></select>
+
+                    <h5 class="fw-bold text-body mb-2">2. Interactive Skills Checklist</h5>
+                    
+                    <!-- Domain Category Filter Pills -->
+                    <div class="nav nav-pills gap-1 mb-3" id="categoryTabs">
+                        <button class="nav-link active btn-sm py-1 px-2" onclick="filterCategory('All', this)">All</button>
+                        <button class="nav-link btn-sm py-1 px-2" onclick="filterCategory('Tech', this)">Tech</button>
+                        <button class="nav-link btn-sm py-1 px-2" onclick="filterCategory('Business', this)">Business</button>
+                        <button class="nav-link btn-sm py-1 px-2" onclick="filterCategory('Design', this)">Arts & Design</button>
+                        <button class="nav-link btn-sm py-1 px-2" onclick="filterCategory('Engineering', this)">Engineering</button>
+                        <button class="nav-link btn-sm py-1 px-2" onclick="filterCategory('Science', this)">Science</button>
+                    </div>
+
+                    <div id="skillChips" class="d-flex flex-wrap gap-2 mb-4" style="max-height: 220px; overflow-y: auto;">
+                        <span class="text-body-secondary small">Loading skills database...</span>
+                    </div>
+
+                    <button class="btn btn-primary w-100 fw-bold py-2" onclick="runAnalysis()">Run Differential Analysis</button>
+                </div>
+            </div>
+
+            <!-- Right Output Dashboard -->
+            <div class="col-lg-7">
+                <div id="placeholder" class="card shadow-sm border-0 p-5 text-center text-body-secondary">
+                    <h4>Select a target career field or create a custom role to generate your readiness analysis.</h4>
+                </div>
+
+                <div id="resultCard" class="card shadow-sm border-0 p-4 d-none">
+                    <div id="exportableArea">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="fw-bold text-body mb-0" id="roleTitleHeader"></h3>
+                            <span id="scoreBadge" class="badge bg-primary fs-5 px-3 py-2">0% Match</span>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between text-body-secondary mb-1 small fw-bold">
+                                <span>INDUSTRY READINESS MATCH</span>
+                                <span id="progressText">0%</span>
+                            </div>
+                            <div class="progress" style="height: 12px;">
+                                <div id="progressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold text-success mb-2">✓ Covered Skills:</h6>
+                                <div id="coveredBadges" class="d-flex flex-wrap gap-1"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold text-danger mb-2">⚠ Identified Skill Gap:</h6>
+                                <div id="missingBadges" class="d-flex flex-wrap gap-1"></div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Recipe Blueprint Card -->
+                        <div id="recipeBox" class="mt-3">
+                            <h5 class="fw-bold text-primary mb-2">💡 Recommended Industry Project Blueprint</h5>
+                            <div class="p-3 bg-body-secondary border rounded">
+                                <h4 id="recipeTitle" class="fw-bold text-body mt-1"></h4>
+                                <p id="recipeDesc" class="text-body-secondary mb-3"></p>
+                                
+                                <a id="githubBtn" href="#" target="_blank" class="btn btn-outline-dark btn-sm mb-3 fw-bold">
+                                    📦 View Blueprint Template
+                                </a>
+
+                                <div class="bg-body p-3 border rounded">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-bold text-body small">ATS-READY RESUME BULLET POINT (STAR METHOD)</span>
+                                        <button class="btn btn-sm btn-outline-secondary py-0" onclick="copyResumeBullet()">Copy</button>
+                                    </div>
+                                    <code id="resumeBullet" class="text-body d-block"></code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-success fw-bold w-100 mt-4" onclick="exportPDF()">
+                        📥 Download Career Roadmap Report (PDF)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Adding Custom Job Role -->
+    <div class="modal fade" id="addRoleModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">➕ Create Custom Job Role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Role Title</label>
+                        <input type="text" id="newRoleTitle" class="form-control" placeholder="e.g. AI / Machine Learning Specialist">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Domain / Field Description</label>
+                        <input type="text" id="newRoleDesc" class="form-control" placeholder="e.g. Artificial Intelligence & Data Science">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Required Skills for this Role</label>
+                        <div id="modalSkillSelect" class="d-flex flex-wrap gap-2 border p-3 rounded" style="max-height: 180px; overflow-y: auto;">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary fw-bold" onclick="saveCustomRole()">Save Job Role</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let availableSkills = [];
+        let selectedSkills = new Set(["Spring Boot", "MySQL", "Advanced Excel"]);
+        let modalSelectedSkills = new Set();
+        let activeCategory = 'All';
+
+        async function init() {
+            await loadSkills();
+            await loadRoles();
+            await runAnalysis();
+        }
+
+        async function loadRoles(selectedRoleId = null) {
+            const res = await fetch('/api/roles');
+            const roles = await res.json();
+            const select = document.getElementById('roleSelect');
+            
+            if (roles.length === 0) {
+                select.innerHTML = '<option value="">No roles available. Add one above!</option>';
+                return;
+            }
+
+            select.innerHTML = roles.map(r => `<option value="${r.id}">${r.title} (${r.description})</option>`).join('');
+            
+            if (selectedRoleId) {
+                select.value = selectedRoleId;
+            }
+        }
+
+        async function loadSkills() {
+            const res = await fetch('/api/skills');
+            availableSkills = await res.json();
+            renderSkillChips();
+            renderModalSkillChips();
+        }
+
+        function filterCategory(cat, btnElement) {
+            activeCategory = cat;
+            document.querySelectorAll('#categoryTabs .nav-link').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+            renderSkillChips();
+        }
+
+        function renderSkillChips() {
+            const container = document.getElementById('skillChips');
+            const filtered = activeCategory === 'All' ? availableSkills : availableSkills.filter(s => s.category === activeCategory);
+            
+            container.innerHTML = filtered.map(s => {
+                const isSelected = selectedSkills.has(s.name);
+                return `<span class="badge border text-body bg-body skill-chip p-2 ${isSelected ? 'selected' : ''}" 
+                              onclick="toggleSkill('${s.name}')">
+                            ${s.name}
+                        </span>`;
+            }).join('');
+        }
+
+        function renderModalSkillChips() {
+            const container = document.getElementById('modalSkillSelect');
+            container.innerHTML = availableSkills.map(s => {
+                const isSelected = modalSelectedSkills.has(s.id);
+                return `<span class="badge border text-body bg-body skill-chip p-2 ${isSelected ? 'selected' : ''}" 
+                              onclick="toggleModalSkill(${s.id}, this)">
+                            ${s.name}
+                        </span>`;
+            }).join('');
+        }
+
+        function toggleModalSkill(skillId, element) {
+            if (modalSelectedSkills.has(skillId)) {
+                modalSelectedSkills.delete(skillId);
+                element.classList.remove('selected');
+            } else {
+                modalSelectedSkills.add(skillId);
+                element.classList.add('selected');
+            }
+        }
+
+        function toggleSkill(skillName) {
+            if (selectedSkills.has(skillName)) {
+                selectedSkills.delete(skillName);
+            } else {
+                selectedSkills.add(skillName);
+            }
+            renderSkillChips();
+            runAnalysis();
+        }
+
+        async function saveCustomRole() {
+            const title = document.getElementById('newRoleTitle').value.trim();
+            const description = document.getElementById('newRoleDesc').value.trim();
+
+            if (!title) {
+                alert('Please enter a role title.');
+                return;
+            }
+
+            const requiredSkills = Array.from(modalSelectedSkills).map(id => ({ id }));
+
+            const payload = {
+                title: title,
+                description: description || 'Custom Field',
+                requiredSkills: requiredSkills
+            };
+
+            const res = await fetch('/api/roles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const newRole = await res.json();
+                
+                // Close modal
+                const modalEl = document.getElementById('addRoleModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                modal.hide();
+
+                // Reset form
+                document.getElementById('newRoleTitle').value = '';
+                document.getElementById('newRoleDesc').value = '';
+                modalSelectedSkills.clear();
+
+                // Reload dropdown and select newly added role
+                await loadRoles(newRole.id);
+                runAnalysis();
+            } else {
+                alert('Failed to save role.');
+            }
+        }
+
+        function parseSyllabusText() {
+            const text = document.getElementById('syllabusText').value.toLowerCase();
+            if (!text.trim()) return;
+
+            let matchedCount = 0;
+            availableSkills.forEach(s => {
+                if (text.includes(s.name.toLowerCase())) {
+                    selectedSkills.add(s.name);
+                    matchedCount++;
+                }
+            });
+
+            renderSkillChips();
+            runAnalysis();
+            alert(`Auto-detected and selected ${matchedCount} matching skill(s) from your syllabus text!`);
+        }
+
+        async function runAnalysis() {
+            const roleId = document.getElementById('roleSelect').value;
+            if (!roleId) return;
+
+            const res = await fetch(`/api/analysis/gap?roleId=${roleId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(Array.from(selectedSkills))
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('placeholder').classList.add('d-none');
+                document.getElementById('resultCard').classList.remove('d-none');
+
+                document.getElementById('roleTitleHeader').innerText = data.roleTitle;
+                
+                const score = data.matchPercentage;
+                document.getElementById('scoreBadge').innerText = `${score}% Match`;
+                document.getElementById('progressText').innerText = `${score}%`;
+                const pBar = document.getElementById('progressBar');
+                pBar.style.width = `${score}%`;
+                pBar.className = `progress-bar ${score >= 75 ? 'bg-success' : score >= 40 ? 'bg-warning' : 'bg-danger'}`;
+
+                document.getElementById('coveredBadges').innerHTML = Array.from(data.coveredSkills).length > 0 ?
+                    Array.from(data.coveredSkills).map(s => `<span class="badge bg-success">${s}</span>`).join(' ') :
+                    '<span class="text-body-secondary small">None</span>';
+
+                document.getElementById('missingBadges').innerHTML = Array.from(data.missingSkills).length > 0 ?
+                    Array.from(data.missingSkills).map(s => `<span class="badge bg-danger">${s}</span>`).join(' ') :
+                    '<span class="text-success small">No Gaps Identified! 🎉</span>';
+
+                if (data.recommendedRecipe) {
+                    document.getElementById('recipeBox').classList.remove('d-none');
+                    document.getElementById('recipeTitle').innerText = data.recommendedRecipe.title;
+                    document.getElementById('recipeDesc').innerText = data.recommendedRecipe.description;
+                    document.getElementById('githubBtn').href = data.recommendedRecipe.githubTemplateUrl;
+                    document.getElementById('resumeBullet').innerText = data.recommendedRecipe.resumeBulletPoint;
+                } else {
+                    document.getElementById('recipeBox').classList.add('d-none');
+                }
+            }
+        }
+
+        function copyResumeBullet() {
+            const text = document.getElementById('resumeBullet').innerText;
+            navigator.clipboard.writeText(text);
+            alert('ATS Resume Bullet copied to clipboard!');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-bs-theme');
+            html.setAttribute('data-bs-theme', current === 'dark' ? 'light' : 'dark');
+        }
+
+        function exportPDF() {
+            const element = document.getElementById('exportableArea');
+            const opt = {
+                margin:       0.5,
+                filename:     'EduBridge_Career_Roadmap.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        init();
+    </script>
+</body>
+</html>
