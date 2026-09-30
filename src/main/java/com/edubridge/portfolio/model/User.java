@@ -83,4 +83,15 @@ public class User {
     public void setTargetRoleId(Long targetRoleId) {
         this.targetRoleId = targetRoleId;
     }
+
+    @Column(unique = true)
+    private String slug;
+
+    public String getSlug() {
+        return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
+    }
 }
