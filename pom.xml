@@ -59,6 +59,7 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+<<<<<<< HEAD
 		<dependency>
     <groupId>com.h2database</groupId>
     <artifactId>h2</artifactId>
@@ -69,6 +70,8 @@
     <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
     <version>2.5.0</version>
 </dependency>
+=======
+>>>>>>> 534ee4228c24018e013d0b7a7d7aeddc93502469
 	</dependencies>
 
 	<build>

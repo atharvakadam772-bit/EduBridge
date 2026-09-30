@@ -6,4 +6,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SkillRepository extends JpaRepository<Skill, Long> {
+<<<<<<< HEAD
 }               
+=======
+}
+>>>>>>> 534ee4228c24018e013d0b7a7d7aeddc93502469

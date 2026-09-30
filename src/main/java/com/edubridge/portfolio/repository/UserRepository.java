@@ -10,6 +10,9 @@ import com.edubridge.portfolio.model.User;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
+<<<<<<< HEAD
 
     Optional<User> findBySlug(String slug);
+=======
+>>>>>>> 534ee4228c24018e013d0b7a7d7aeddc93502469
 }

@@ -83,6 +83,7 @@ public class User {
     public void setTargetRoleId(Long targetRoleId) {
         this.targetRoleId = targetRoleId;
     }
+<<<<<<< HEAD
 
     @Column(unique = true)
     private String slug;
@@ -94,4 +95,6 @@ public class User {
     public void setSlug(String slug) {
         this.slug = slug;
     }
+=======
+>>>>>>> 534ee4228c24018e013d0b7a7d7aeddc93502469
 }
